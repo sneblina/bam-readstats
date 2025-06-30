@@ -1,21 +1,73 @@
+import logging
+import pandas as pd
+import dash
+from dash import html, dash_table
+
+logger = logging.getLogger(__name__)
+
+def write_tsv(stats, output_path):
+    if not stats:
+        logger.warning("No stats to write to TSV.")
+        return
+    df = pd.DataFrame(stats)
+    df["AvgBaseQuality"] = df["AvgBaseQuality"].map(lambda x: f"{x:.2f}")
+    df["GCContent"] = df["GCContent"].map(lambda x: f"{x:.2f}")
+    df["NumMismatches"] = df["NumMismatches"].apply(lambda x: int(x) if pd.notnull(x) else "")
+
+    df.to_csv(output_path, sep="\t", index=False,
+            columns=["ReadID", "FragmentLength", "AvgBaseQuality", "GCContent", "NumMismatches"])
+
+
 def write_html(stats, overlap_count, output_path):
     html = f"""<html><head><title>Read Stats</title></head><body>
     <h1>Read Statistics</h1>
-    <p>Total Reads: {len(stats)}</p>
+    <p>Total Mapped Reads: {len(stats)}</p>
     <p>Overlapping Reads: {overlap_count}</p>
     <table border='1'>
-    <tr><th>ReadName</th><th>FragmentLength</th><th>AvgBaseQuality</th><th>GCContent</th><th>NumMismatches</th></tr>
+    <tr>
+        <th>ReadID</th>
+        <th>FragmentLength</th>
+        <th>AvgBaseQuality</th>
+        <th>GCContent</th>
+        <th>NumMismatches</th>
+    </tr>
     """
 
     for s in stats:
-        # html += f"<tr><td>{s['fragment_length']}</td><td>{s['avg_base_quality']:.2f}</td><td>{s['gc_content']}</td><td>{s['num_mismatches']}</td></tr>\n"
         if s is not None:
-            html += f"<tr><td>{s['read_id']}</td><td>{s['fragment_length']}</td><td>{s['avg_base_quality']:.2f}</td><td>{s['gc_content']}</td><td>{s['num_mismatches']}</td></tr>\n"
-        else:
-            # Optionally log or handle missing data
-            html += "<tr><td colspan='4'>No data available</td></tr>\n"
-        
-        html += "</table></body></html>"
+            # Format floats to 2 decimals, handle None gracefully
+            avg_qual = f"{s['AvgBaseQuality']:.2f}" if s['AvgBaseQuality'] is not None else ""
+            gc_cont = f"{s['GCContent']:.2f}" if s['GCContent'] is not None else ""
+            num_mismatches = s['NumMismatches'] if s['NumMismatches'] is not None else ""
 
-    with open(output_path, "w") as f:
+            html += f"<tr><td>{s['ReadID']}</td><td>{s['FragmentLength']}</td><td>{avg_qual}</td><td>{gc_cont}</td><td>{num_mismatches}</td></tr>\n"
+        else:
+            html += "<tr><td colspan='5'>No data available</td></tr>\n"
+
+    # Close table and body tags OUTSIDE the loop!
+    html += "</table></body></html>"
+
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(html)
+
+
+def create_dash_app(stats, overlap_count):
+    """Create Dash app showing stats and overlap summary."""
+    df = pd.DataFrame(stats)
+
+    app = dash.Dash(__name__)
+    app.layout = html.Div([
+        html.H1("Read Statistics Report"),
+        html.P(f"Total Mapped Reads: {len(stats)}"),
+        html.P(f"Overlapping Reads (with BED regions): {overlap_count}"),
+        dash_table.DataTable(
+            columns=[{"name": col, "id": col} for col in df.columns],
+            data=df.to_dict('records'),
+            page_size=20,
+            filter_action="native",
+            sort_action="native",
+            style_table={'overflowX': 'auto'},
+            style_cell={'textAlign': 'left'}
+        ),
+    ])
+    return app

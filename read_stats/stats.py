@@ -17,11 +17,11 @@ def compute_stats(read):
         num_mismatches = read.get_tag("NM") if read.has_tag("NM") else None
 
         return {
-            "read_id": read.query_name,
-            "fragment_length": frag_length,
-            "avg_base_quality": avg_quality,
-            "gc_content": gc_content,
-            "num_mismatches": num_mismatches,
+            "ReadID": read.query_name,
+            "FragmentLength": frag_length,
+            "AvgBaseQuality": avg_quality,
+            "GCContent": gc_content,
+            "NumMismatches": num_mismatches,
             "chrom": read.reference_name,
             "start": read.reference_start,
             "end": read.reference_end

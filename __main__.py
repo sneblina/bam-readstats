@@ -2,8 +2,8 @@
 
 from .read_stats.cli import parse_args   
 from .read_stats.stats import compute_stats
-from .read_stats.io_utils import read_bam, load_bed, check_overlap, write_tsv
-from .read_stats.report import write_html
+from .read_stats.io_utils import read_bam, load_bed, check_overlap
+from .read_stats.report import write_tsv, write_html, create_dash_app
 
 def main():
     args = parse_args()
@@ -24,6 +24,8 @@ def main():
 
     write_tsv(stats, output_path + '/output.tsv') #input this path
     write_html(stats, overlap_count, output_path + '/output.html') #input this path
+    app = create_dash_app(stats, overlap_count)
+    app.run(debug=True)
 
 if __name__ == "__main__":
     main()
