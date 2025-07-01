@@ -6,5 +6,5 @@ A Python tool for computing per-read statistics from BAM files, including fragme
 Run the tool with:
 
 ```
-python -m bam-readstats --bam /path/to/file.bam --output /path/to/output/folder
+python -m bam-readstats --bam /path/to/file.bam --bed /path/to/file.bed --output /path/to/output/folder
 ```
