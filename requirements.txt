@@ -1,5 +1,5 @@
 pysam
-pybedtools
 biopython
 pandas
 dash
+pyranges

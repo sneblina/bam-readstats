@@ -1,21 +1,44 @@
-import logging
 import pandas as pd
 import dash
+from .logging_config import setup_logger
 from dash import html, dash_table
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
-def write_tsv(stats, output_path):
-    if not stats:
-        logger.warning("No stats to write to TSV.")
-        return
-    df = pd.DataFrame(stats)
+def write_tsv(df:pd.DataFrame, output_path):
+    # if not df:
+    #     logger.warning("No stats to write to TSV.")
+    #     return
     df["AvgBaseQuality"] = df["AvgBaseQuality"].map(lambda x: f"{x:.2f}")
     df["GCContent"] = df["GCContent"].map(lambda x: f"{x:.2f}")
     df["NumMismatches"] = df["NumMismatches"].apply(lambda x: int(x) if pd.notnull(x) else "")
 
     df.to_csv(output_path, sep="\t", index=False,
-            columns=["ReadID", "FragmentLength", "AvgBaseQuality", "GCContent", "NumMismatches"])
+            columns=["ReadID", "FragmentLength", "AvgBaseQuality", "GCContent", "NumMismatches", "Overlap"])
+
+def create_dash_app(stats):
+    """Create Dash app showing stats and overlap summary."""
+    df = pd.DataFrame(stats)
+    df["FragmentLength"] = df["FragmentLength"].astype(int)
+    df["Overlap"] = df["Overlap"].astype(int)
+    overlap_count = df["Overlap"].sum()
+    app = dash.Dash(__name__)
+    app.layout = html.Div([
+        html.H1("Read Statistics Report"),
+        html.P(f"Total Mapped Reads: {len(stats)}"),
+        html.P(f"Overlapping Reads (with BED regions): {overlap_count}"),
+        dash_table.DataTable(
+            columns=[{"name": col, "id": col} for col in df.columns],
+            data=df.to_dict('records'),
+            page_size=20,
+            filter_action="native",
+            sort_action="native",
+            style_table={'overflowX': 'auto'},
+            style_cell={'textAlign': 'left'}
+        ),
+    ])
+    return app
+
 
 
 def write_html(stats, overlap_count, output_path):
@@ -49,25 +72,3 @@ def write_html(stats, overlap_count, output_path):
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html)
-
-
-def create_dash_app(stats, overlap_count):
-    """Create Dash app showing stats and overlap summary."""
-    df = pd.DataFrame(stats)
-
-    app = dash.Dash(__name__)
-    app.layout = html.Div([
-        html.H1("Read Statistics Report"),
-        html.P(f"Total Mapped Reads: {len(stats)}"),
-        html.P(f"Overlapping Reads (with BED regions): {overlap_count}"),
-        dash_table.DataTable(
-            columns=[{"name": col, "id": col} for col in df.columns],
-            data=df.to_dict('records'),
-            page_size=20,
-            filter_action="native",
-            sort_action="native",
-            style_table={'overflowX': 'auto'},
-            style_cell={'textAlign': 'left'}
-        ),
-    ])
-    return app
