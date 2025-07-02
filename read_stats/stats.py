@@ -13,7 +13,7 @@ def compute_stats(read):
         frag_length = abs(read.template_length)
         base_qualities = read.query_qualities or []
         avg_base_quality = compute_avg_quality(base_qualities)
-        read_seq = read.query_sequence or ""
+        read_seq = read.query_sequence
         gc_content = gc_fraction(read_seq) if read_seq else 0
         num_mismatches = read.get_tag("NM") if read.has_tag("NM") else None
         

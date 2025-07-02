@@ -10,13 +10,11 @@ def check_overlap(stats, bed_regions):
     if bed_regions is None or bed_regions.empty:
         logger.info("No BED file specified. Skipping overlap computation.")
         return df
-
-    pr_df = df[["Chromosome", "Start", "End"]].copy()
-    pr_df["index"] = df.index  # Keep track of original rows
-    reads = pr.PyRanges(pr_df)
+    # Convert stats DataFrame to PyRanges
+    reads = pr.PyRanges(df)
     overlapping = reads.overlap(bed_regions)
 
     # Mark overlaps
     if not overlapping.empty:
-        df.loc[overlapping["index"], "Overlap"] = 1
+        df.loc[overlapping.index, "Overlap"] = 1
     return df

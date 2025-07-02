@@ -1,5 +1,6 @@
-import pandas as pd
 import json
+import os
+import pandas as pd
 from read_stats.logging_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -8,10 +9,12 @@ def write_tsv(df, output_path):
     if df.empty:
         logger.warning("No stats to write to TSV.")
         return
-    df["AvgBaseQuality"] = df["AvgBaseQuality"].map(lambda x: f"{x:.2f}")
-    df["GCContent"] = df["GCContent"].map(lambda x: f"{x:.2f}")
+    # Use safe formatting for None values
+    df["AvgBaseQuality"] = df["AvgBaseQuality"].map(lambda x: f"{x:.2f}" if pd.notnull(x) else "")
+    df["GCContent"] = df["GCContent"].map(lambda x: f"{x:.2f}" if pd.notnull(x) else "")
     df["NumMismatches"] = df["NumMismatches"].apply(lambda x: int(x) if pd.notnull(x) else "")
-
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
     df.to_csv(output_path, sep="\t", index=False,
             columns=["ReadID", "FragmentLength", "AvgBaseQuality", "GCContent", "NumMismatches", "Overlap"])
 
@@ -123,7 +126,7 @@ def write_html(stats, output_path):
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html)
 
-def write_simple_html(stats, output_path):
+def write_simple_html(stats, output_path):        
     overlap_count = stats["Overlap"].sum()
     html = f"""<html><head><title>Read Stats</title></head><body>
     <h1>Read Statistics</h1>
@@ -152,6 +155,7 @@ def write_simple_html(stats, output_path):
 
     # Close table and body tags OUTSIDE the loop!
     html += "</table></body></html>"
-
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html)

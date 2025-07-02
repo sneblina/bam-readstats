@@ -14,7 +14,7 @@ def main():
     bam = read_bam(args.bam)
     bed = read_bed(args.bed) if args.bed else None
     output_path = args.output
-
+    
     stats = []
     for read in bam.fetch():
         read_stats = compute_stats(read)
