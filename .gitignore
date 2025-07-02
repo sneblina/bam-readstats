@@ -1,0 +1,7 @@
+output
+log
+.vscode
+.DS_Store
+.venv
+__pycache__
+data

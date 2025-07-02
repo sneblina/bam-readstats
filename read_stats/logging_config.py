@@ -1,7 +1,7 @@
 import logging
 import os
 
-def setup_logger(name, log_dir="log", log_file=None, level=logging.INFO):
+def setup_logger(name, log_dir="log", log_file='bamreadstats', level=logging.INFO):
     """
     Set up and return a logger that writes to a specific log file inside log_dir.
 
@@ -16,8 +16,7 @@ def setup_logger(name, log_dir="log", log_file=None, level=logging.INFO):
     """
     os.makedirs(log_dir, exist_ok=True)
 
-    if log_file is None:
-        log_file = f"{name}.log"
+    log_file = f"{log_file}.log"
 
     log_path = os.path.join(log_dir, log_file)
 
