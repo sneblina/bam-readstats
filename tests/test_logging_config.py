@@ -17,8 +17,18 @@ class TestSetupLogger(unittest.TestCase):
         if os.path.exists(TEST_LOG_DIR):
             shutil.rmtree(TEST_LOG_DIR)
         os.makedirs(TEST_LOG_DIR)
-        # Reset logging state for a specific logger to avoid interference between tests
-        logging.getLogger("test_logger").handlers = []
+
+    def tearDown(self):
+        """Clean up after each test."""
+        # Remove the test log directory after tests
+        if os.path.exists(TEST_LOG_DIR):
+            shutil.rmtree(TEST_LOG_DIR)
+        # Properly close and remove all handlers for the test logger
+        logger = logging.getLogger("test_logger")
+        for handler in logger.handlers[:]:
+            handler.close()
+            logger.removeHandler(handler)
+        logger.handlers = []
 
     def test_logger_instance(self):
         """Test that setup_logger returns a Logger instance."""

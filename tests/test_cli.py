@@ -32,14 +32,18 @@ class TestCLI(unittest.TestCase):
     @patch('sys.argv', ['read_stats/cli.py', '--bam', 'input.bam']) # Missing --output
     @patch('argparse.ArgumentParser.print_usage') # Suppress usage message during test
     def test_parse_args_missing_required_arguments(self, mock_print_usage):
-        with self.assertRaises(SystemExit):
-            parse_args()
+        with patch('sys.stderr'):
+            with self.assertRaises(SystemExit):
+                parse_args()
+        mock_print_usage.assert_called_once()
 
     @patch('sys.argv', ['read_stats/cli.py', '--output', 'out', '--bam', 'in.bam', '--unknown_arg', 'value'])
     @patch('argparse.ArgumentParser.print_usage') # Suppress usage message during test
     def test_parse_args_unknown_argument(self, mock_print_usage):
-        with self.assertRaises(SystemExit):
-            parse_args()
+        with patch('sys.stderr'):
+            with self.assertRaises(SystemExit):
+                parse_args()
+        mock_print_usage.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()
