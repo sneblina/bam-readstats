@@ -1,7 +1,6 @@
 import pandas as pd
-import dash
-from .logging_config import setup_logger
-from dash import html, dash_table
+import json
+from read_stats.logging_config import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -16,59 +15,111 @@ def write_tsv(df:pd.DataFrame, output_path):
     df.to_csv(output_path, sep="\t", index=False,
             columns=["ReadID", "FragmentLength", "AvgBaseQuality", "GCContent", "NumMismatches", "Overlap"])
 
-def create_dash_app(stats):
-    """Create Dash app showing stats and overlap summary."""
-    df = pd.DataFrame(stats)
-    df["FragmentLength"] = df["FragmentLength"].astype(int)
-    df["Overlap"] = df["Overlap"].astype(int)
-    overlap_count = df["Overlap"].sum()
-    app = dash.Dash(__name__)
-    app.layout = html.Div([
-        html.H1("Read Statistics Report"),
-        html.P(f"Total Mapped Reads: {len(stats)}"),
-        html.P(f"Overlapping Reads (with BED regions): {overlap_count}"),
-        dash_table.DataTable(
-            columns=[{"name": col, "id": col} for col in df.columns],
-            data=df.to_dict('records'),
-            page_size=20,
-            filter_action="native",
-            sort_action="native",
-            style_table={'overflowX': 'auto'},
-            style_cell={'textAlign': 'left'}
-        ),
-    ])
-    return app
+def write_html(stats: pd.DataFrame, output_path: str):
+        # Drop missing values just for plotting purposes
+    stats_clean = stats[["AvgBaseQuality", "GCContent", "NumMismatches", "Overlap"]].dropna()
 
+    # Convert selected columns to a JSON dict for Plotly
+    data_json = stats_clean.to_dict(orient="list")
 
+    # HTML + Plotly Dashboard Template
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Read Stats Summary</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                margin: 40px;
+            }}
+            h1 {{
+                text-align: center;
+            }}
+            .chart-container {{
+                width: 48%;
+                display: inline-block;
+                vertical-align: top;
+            }}
+            .full-width {{
+                width: 100%;
+                margin-top: 30px;
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>Read Statistics Summary</h1>
 
-def write_html(stats, overlap_count, output_path):
-    html = f"""<html><head><title>Read Stats</title></head><body>
-    <h1>Read Statistics</h1>
-    <p>Total Mapped Reads: {len(stats)}</p>
-    <p>Overlapping Reads: {overlap_count}</p>
-    <table border='1'>
-    <tr>
-        <th>ReadID</th>
-        <th>FragmentLength</th>
-        <th>AvgBaseQuality</th>
-        <th>GCContent</th>
-        <th>NumMismatches</th>
-    </tr>
+        <div class="chart-container" id="avgBaseQuality"></div>
+        <div class="chart-container" id="gcContent"></div>
+        <div class="chart-container" id="numMismatches"></div>
+        <div class="chart-container" id="overlapChart"></div>
+
+        <script>
+            const data = {json.dumps(data_json)};
+
+            // AvgBaseQuality Histogram
+            Plotly.newPlot('avgBaseQuality', [{{
+                x: data.AvgBaseQuality,
+                type: 'histogram',
+                marker: {{ color: 'teal' }}
+            }}], {{
+                title: 'Average Base Quality Distribution',
+                xaxis: {{ title: 'AvgBaseQuality' }},
+                yaxis: {{ title: 'Count' }}
+            }});
+
+            // GCContent Histogram
+            Plotly.newPlot('gcContent', [{{
+                x: data.GCContent,
+                type: 'histogram',
+                marker: {{ color: 'purple' }}
+            }}], {{
+                title: 'GC Content Distribution',
+                xaxis: {{ title: 'GCContent (%)' }},
+                yaxis: {{ title: 'Count' }}
+            }});
+
+            // NumMismatches Bar Chart
+            const mismatchCounts = {{
+                x: Array.from(new Set(data.NumMismatches)).sort((a,b)=>a-b),
+                y: []
+            }};
+            mismatchCounts.x.forEach(val => {{
+                mismatchCounts.y.push(data.NumMismatches.filter(x => x === val).length);
+            }});
+
+            Plotly.newPlot('numMismatches', [{{
+                x: mismatchCounts.x,
+                y: mismatchCounts.y,
+                type: 'bar',
+                marker: {{ color: 'orange' }}
+            }}], {{
+                title: 'Number of Mismatches',
+                xaxis: {{ title: 'NumMismatches' }},
+                yaxis: {{ title: 'Count' }}
+            }});
+
+            // Overlap Pie Chart
+            const overlapCounts = {{
+                labels: ['No Overlap', 'Overlap'],
+                values: [data.Overlap.filter(x => x == 0).length, data.Overlap.filter(x => x == 1).length]
+            }};
+
+            Plotly.newPlot('overlapChart', [{{
+                labels: overlapCounts.labels,
+                values: overlapCounts.values,
+                type: 'pie'
+            }}], {{
+                title: 'Overlap Summary'
+            }});
+        </script>
+    </body>
+    </html>
     """
-
-    for s in stats:
-        if s is not None:
-            # Format floats to 2 decimals, handle None gracefully
-            avg_qual = f"{s['AvgBaseQuality']:.2f}" if s['AvgBaseQuality'] is not None else ""
-            gc_cont = f"{s['GCContent']:.2f}" if s['GCContent'] is not None else ""
-            num_mismatches = s['NumMismatches'] if s['NumMismatches'] is not None else ""
-
-            html += f"<tr><td>{s['ReadID']}</td><td>{s['FragmentLength']}</td><td>{avg_qual}</td><td>{gc_cont}</td><td>{num_mismatches}</td></tr>\n"
-        else:
-            html += "<tr><td colspan='5'>No data available</td></tr>\n"
-
-    # Close table and body tags OUTSIDE the loop!
-    html += "</table></body></html>"
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html)
+

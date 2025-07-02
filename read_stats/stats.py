@@ -1,6 +1,5 @@
-from .logging_config import setup_logger
 from Bio.SeqUtils import gc_fraction
-from pybedtools import BedTool
+from read_stats.logging_config import setup_logger
 
 # logging.basicConfig(filename='log/unmapped_reads.log', level=logging.INFO)
 logger = setup_logger(__name__, log_file="unmapped_reads.log")
@@ -29,7 +28,7 @@ def compute_stats(read):
             "End": read.reference_end
         }
     except Exception as e:
-        logging.error("Error processing read %s: %s", read.query_name, e)
+        logger.error("Error processing read %s: %s", read.query_name, e)
         raise
 
 def compute_fragment_length(read):
