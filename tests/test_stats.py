@@ -1,6 +1,5 @@
 import unittest
 from unittest.mock import Mock, patch
-from Bio.SeqUtils import gc_fraction
 from read_stats.stats import compute_avg_quality, compute_stats
 
 class TestStats(unittest.TestCase):
